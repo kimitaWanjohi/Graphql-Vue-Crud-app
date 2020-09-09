@@ -1,0 +1,235 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <title>Title</title>
+</head>
+<body>
+    <div class="container row" id="app">
+        <div class="card col-md-8">
+            <ul class="list-group-item-success">
+                <li class="list-group-item" v-for="laptop in laptops">
+                    <div class="list-group">
+                        [[laptop.name]] | cpu used - [[ laptop.cpu.name ]] | ram - [[ laptop.ram]] | made by - [[ laptop.company.name ]]
+                        <button class="btn-info btn" v-on:click="updateLaptop(laptop.id)">Update</button> |
+                        <button class="btn btn-del" v-on:click="deleteLaptop(laptop.id)">delete</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <form class="form-group" v-on:submit.prevent="addLaptop(newLaptop.name, newLaptop.ram, newLaptop.cpu.id, newLaptop.company.id)">
+                    laptop name: <input type="text" class="form-control" v-model="newLaptop.name"/>
+                    laptop ram:  <select v-model="newLaptop.ram" class="form-control">
+                                    <option value="1 Gb">1 Gb</option>
+                                    <option value="2 Gb">2 Gb</option>
+                                    <option value="4 Gb">4 Gb</option>
+                                    <option value="8 Gb">8 Gb</option>
+                                    <option value="16 Gb">16 Gb</option>
+                                    <option value="32 Gb">32 Gb</option>
+                                    <option value="64 Gb">64 Gb</option>
+                                </select>
+                    cpu:        <select class="form-control" v-model="newLaptop.cpu.id">
+                                        <option v-for="cpu in laptopCpus" v-bind:value="cpu.id">[[cpu.name]]</option>
+                                 </select>
+
+                    company :     <select class="form-control" v-model="newLaptop.company.id">
+                                        <option v-for="company in companies" v-bind:value="company.id">[[company.name]]</option>
+                                 </select>
+                    <br>
+                    <button class="btn btn-info" type="submit">add laptop</button>
+                </form>
+            </div>
+        </div>
+    </div>
+<script>
+    const app = new Vue({
+    el: "#app",
+    delimiters: ['[[',']]'],
+    mounted() {
+        this.getLaptops();
+        this.getCompanies();
+        this.getCpus();
+    },
+    data: {
+        laptopCpus: [],
+        laptops: [],
+        companies: [],
+        currentLaptop: {
+            name: null,
+            ram: null,
+        },
+        newLaptop: {
+            name: null,
+            ram: null,
+            cpu: {
+                id: null
+            },
+            company: {
+                id: null
+            }
+        }
+    },
+    methods: {
+        getLaptops(){
+            axios({
+                method: "POST",
+                url: "http://127.0.0.1:8000/graphql/",
+                data: {
+                    query: `
+                        query{
+                            allLaptops{
+                                id
+                                name
+                                ram
+                                cpu{
+                                    id
+                                    name
+                                }
+                                company{
+                                    id
+                                    name
+                                }
+                            }
+                        }
+                    `
+                },
+            }).then((res) => {
+                this.laptops = res.data.data.allLaptops;
+            }).catch((err) => {
+                console.log(err)
+            });
+        },
+
+        deleteLaptop(id){
+            axios({
+                method: "POST",
+                url: "http://127.0.0.1:8000/graphql/",
+                data: {
+                    query: `
+                        mutation{
+                          laptopDelete(id:${id}){
+                            laptop{
+                              id
+                            }
+                          }
+                        }
+                    `
+                }
+            }).then(res => {
+               this.getLaptops()
+            })
+                .catch(err => {
+                    console.log(err);
+                })
+        },
+
+        updateLaptop(id, name, ram){
+            axios({
+                method: "POST",
+                url: 'http://127.0.0.1:8000/graphql/',
+                data:{
+                    query: `
+                    mutation{
+                      laptopUpdate(input: {
+                        id: 0
+                        name: ""
+                        ram: ""
+                      }){
+                        laptop{
+                          id
+                          name
+                          ram
+                        }
+                      }
+                    }
+                    `
+                }
+            })
+        },
+
+        addLaptop(name, ram, cpu_id, company_id){
+            axios({
+                method: "POST",
+                url: "http://127.0.0.1:8000/graphql/",
+                data: {
+                    query: `
+                    mutation{
+                          laptopCreate(
+                            name: "${name}"
+                            ram: "${ram}"
+                            cpuId: ${cpu_id}
+                            companyId: ${company_id}
+                          ){
+                            laptop{
+                              name
+                            }
+                          }
+                        }
+                    `
+                }
+            }).then(res => {
+               this.getLaptops();
+            })
+                .catch(err => {
+                    console.log(err);
+                })
+        },
+
+        getCompanies(){
+            axios({
+                method: "POST",
+                url: "http://127.0.0.1:8000/graphql/",
+                data: {
+                    query: `
+                        query{
+                            allCompanies{
+                                id
+                                name
+                            }
+                        }
+                    `
+                }
+            }).then(res => {
+                this.companies = res.data.data.allCompanies;
+            })
+                .catch(err => {
+                    console.log(err)
+                })
+        },
+
+        getCpus(){
+            axios({
+                method: "POST",
+                url: "http://127.0.0.1:8000/graphql/",
+                data: {
+                    query: `
+                        query{
+                          allCpus{
+                            id
+                            name
+                          }
+                        }
+                    `
+                }
+            }).then(res => {
+                this.laptopCpus = res.data.data.allCpus;
+            }).catch(err => {
+                console.log(err);
+            })
+        }
+
+    },
+});
+
+</script>
+</body>
+<script src="{% static 'app.js' %}"></script>
+</html>

@@ -1,0 +1,14 @@
+*{
+    padding: 0;
+    margin: auto;
+}
+
+.btn-del{
+    background-color: #ef4343;
+    float: right;
+    color: whitesmoke;
+}
+#app{
+    margin-top: 4px;
+    border-top: transparent  5px ;
+}
